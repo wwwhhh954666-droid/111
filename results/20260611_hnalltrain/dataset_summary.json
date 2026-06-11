@@ -1,0 +1,24 @@
+{
+  "base": "D:\\mask\\baseline_runs\\strategy_patch_dataset_cs_newdata_hn_reviewed_s4mix300_s5mix200_synth1200_cleanbase_xiuzheng1_review_textmimic100_crackcp_spallcp",
+  "out": "D:\\mask\\baseline_runs\\strategy_patch_dataset_cs_newdata_hn_reviewed_s4mix300_s5mix200_synth1200_cleanbase_xiuzheng1_review_textmimic100_crackcp_spallcp_hnalltrain",
+  "hn_images": [
+    "D:\\mask\\baseline_runs\\clean_negative_candidates_for_review\\images",
+    "D:\\mask\\baseline_runs\\clean_negative_candidates_review_20260610_fast\\images",
+    "D:\\mask\\baseline_runs\\clean_negative_candidates_review_20260610\\images"
+  ],
+  "added_train_negatives": 303,
+  "skipped_existing": 557,
+  "skipped_bad": 0,
+  "train_images": 5777,
+  "val_images": 834,
+  "train_zero_masks": {
+    "zero": 1103,
+    "nonzero": 4674,
+    "total": 5777
+  },
+  "val_zero_masks": {
+    "zero": 188,
+    "nonzero": 646,
+    "total": 834
+  }
+}
