@@ -1,0 +1,47 @@
+__pycache__/
+*.py[cod]
+
+# Local environments
+.venv/
+venv/
+env/
+.env
+
+# Datasets and generated patch folders
+data/
+datasets/
+patch_dataset/
+*_patch_tmp/
+strategy_patch_dataset*/
+mask shujuji/
+shujuji/
+
+# Model checkpoints and training artifacts
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+runs/
+checkpoints/
+
+# Large visual outputs
+*.jpg
+*.jpeg
+*.png
+*.tif
+*.tiff
+*.bmp
+*.mp4
+*.avi
+
+# Keep small metric files trackable.
+!*.csv
+!*.json
+!*.md
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
