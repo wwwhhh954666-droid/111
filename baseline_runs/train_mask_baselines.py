@@ -522,7 +522,8 @@ class DualLRASPPAuxFCF(nn.Module):
         weak_crack = 1.0 - torch.sigmoid(raw_crack)
         suppress = F.softplus(self.regular_gate.strength) * regular * weak_crack
         dark_boost = F.softplus(self.failure_fusion.dark_strength) * cues["dark_line"]
-        crack = raw_crack + dark_boost - suppress
+        failure_suppress = 0.25 * F.softplus(self.failure_fusion.suppress_strength) * cues["regular"] * weak_crack
+        crack = raw_crack + dark_boost - suppress - failure_suppress
         out = torch.cat([bg, crack, spall], dim=1)
         return {
             "out": out,
@@ -530,6 +531,7 @@ class DualLRASPPAuxFCF(nn.Module):
             "spall": spall,
             "raw_crack": raw_crack,
             "regular": regular,
+            "failure_regular": cues["regular"],
             "dark_line": cues["dark_line"],
             "spall_boundary": cues["spall_boundary"],
         }
@@ -638,6 +640,8 @@ def compute_loss(
     soft_boundary_weight=0.45,
     boundary_aux_weight=0.15,
     gate_l1_weight=0.01,
+    hn_crack_penalty_weight=0.0,
+    hn_crack_prob_threshold=0.03,
 ):
     if isinstance(logits, dict):
         out = logits["out"]
@@ -650,6 +654,8 @@ def compute_loss(
             soft_boundary_weight,
             boundary_aux_weight,
             gate_l1_weight,
+            hn_crack_penalty_weight,
+            hn_crack_prob_threshold,
         )
         crack_target = (mask == 1).float().unsqueeze(1)
         spall_target = (mask == 2).float().unsqueeze(1)
@@ -664,18 +670,25 @@ def compute_loss(
             if "dark_line" in logits:
                 loss = loss + gate_l1_weight * logits["dark_line"].mean()
         return loss
+    hn_penalty = logits.new_zeros(())
+    if hn_crack_penalty_weight > 0:
+        hard_negative = mask.flatten(1).amax(dim=1) == 0
+        if hard_negative.any():
+            crack_prob = torch.softmax(logits[hard_negative], dim=1)[:, 1]
+            excess = (crack_prob - hn_crack_prob_threshold).clamp_min(0.0)
+            hn_penalty = hn_crack_penalty_weight * excess.pow(2).mean()
     if mode == "ce_dice":
-        return F.cross_entropy(logits, mask, weight=ce_weight) + dice_loss(logits, mask, num_classes)
+        return F.cross_entropy(logits, mask, weight=ce_weight) + dice_loss(logits, mask, num_classes) + hn_penalty
     if mode == "focal_dice":
-        return focal_loss(logits, mask, alpha=ce_weight) + dice_loss(logits, mask, num_classes)
+        return focal_loss(logits, mask, alpha=ce_weight) + dice_loss(logits, mask, num_classes) + hn_penalty
     if mode == "ce_tversky":
-        return F.cross_entropy(logits, mask, weight=ce_weight) + tversky_loss(logits, mask, num_classes)
+        return F.cross_entropy(logits, mask, weight=ce_weight) + tversky_loss(logits, mask, num_classes) + hn_penalty
     if mode == "focal_tversky":
-        return focal_loss(logits, mask, alpha=ce_weight) + tversky_loss(logits, mask, num_classes)
+        return focal_loss(logits, mask, alpha=ce_weight) + tversky_loss(logits, mask, num_classes) + hn_penalty
     if mode == "soft_ce_tversky":
-        return soft_boundary_cross_entropy(logits, mask, ce_weight, soft_boundary_weight) + tversky_loss(logits, mask, num_classes)
+        return soft_boundary_cross_entropy(logits, mask, ce_weight, soft_boundary_weight) + tversky_loss(logits, mask, num_classes) + hn_penalty
     if mode == "soft_focal_tversky":
-        return soft_boundary_focal_loss(logits, mask, ce_weight, boundary_weight=soft_boundary_weight) + tversky_loss(logits, mask, num_classes)
+        return soft_boundary_focal_loss(logits, mask, ce_weight, boundary_weight=soft_boundary_weight) + tversky_loss(logits, mask, num_classes) + hn_penalty
     raise ValueError(f"Unknown loss mode: {mode}")
 
 
@@ -700,6 +713,8 @@ def evaluate(
     soft_boundary_weight=0.45,
     boundary_aux_weight=0.15,
     gate_l1_weight=0.01,
+    hn_crack_penalty_weight=0.0,
+    hn_crack_prob_threshold=0.03,
 ):
     model.eval()
     conf = torch.zeros((num_classes, num_classes), dtype=torch.float64, device=device)
@@ -716,6 +731,8 @@ def evaluate(
             soft_boundary_weight,
             boundary_aux_weight,
             gate_l1_weight,
+            hn_crack_penalty_weight,
+            hn_crack_prob_threshold,
         )
         val_loss += loss.item()
         pred_logits = logits["out"] if isinstance(logits, dict) else logits
@@ -788,7 +805,17 @@ def train_one(model_name, args, device):
                 f"initialized with partial checkpoint: missing={len(missing)} unexpected={len(unexpected)}",
                 flush=True,
             )
-    if args.train_failure_fusion_only:
+    if args.train_failure_suppress_only:
+        for param in model.parameters():
+            param.requires_grad = False
+        if not hasattr(model, "failure_fusion"):
+            raise ValueError("--train-failure-suppress-only requires a model with failure_fusion")
+        for param in model.failure_fusion.suppress_head.parameters():
+            param.requires_grad = True
+        model.failure_fusion.suppress_strength.requires_grad = True
+        trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"trainable_params={trainable}", flush=True)
+    elif args.train_failure_fusion_only:
         for param in model.parameters():
             param.requires_grad = False
         if not hasattr(model, "failure_fusion"):
@@ -813,6 +840,8 @@ def train_one(model_name, args, device):
             soft_boundary_weight=args.soft_boundary_weight,
             boundary_aux_weight=args.boundary_aux_weight,
             gate_l1_weight=args.gate_l1_weight,
+            hn_crack_penalty_weight=args.hn_crack_penalty_weight,
+            hn_crack_prob_threshold=args.hn_crack_prob_threshold,
         )
         metrics.update({"epoch": 0, "train_loss": 0.0})
         history.append(metrics)
@@ -837,6 +866,8 @@ def train_one(model_name, args, device):
                     soft_boundary_weight=args.soft_boundary_weight,
                     boundary_aux_weight=args.boundary_aux_weight,
                     gate_l1_weight=args.gate_l1_weight,
+                    hn_crack_penalty_weight=args.hn_crack_penalty_weight,
+                    hn_crack_prob_threshold=args.hn_crack_prob_threshold,
                 )
             scaler.scale(loss).backward()
             scaler.step(opt)
@@ -851,6 +882,8 @@ def train_one(model_name, args, device):
             soft_boundary_weight=args.soft_boundary_weight,
             boundary_aux_weight=args.boundary_aux_weight,
             gate_l1_weight=args.gate_l1_weight,
+            hn_crack_penalty_weight=args.hn_crack_penalty_weight,
+            hn_crack_prob_threshold=args.hn_crack_prob_threshold,
         )
         metrics.update({"epoch": epoch, "train_loss": running / max(1, len(train_loader))})
         history.append(metrics)
@@ -890,9 +923,12 @@ def main():
     parser.add_argument("--soft-boundary-weight", type=float, default=0.45)
     parser.add_argument("--boundary-aux-weight", type=float, default=0.15)
     parser.add_argument("--gate-l1-weight", type=float, default=0.01)
+    parser.add_argument("--hn-crack-penalty-weight", type=float, default=0.0)
+    parser.add_argument("--hn-crack-prob-threshold", type=float, default=0.03)
     parser.add_argument("--init-checkpoint", default="")
     parser.add_argument("--eval-initial", action="store_true")
     parser.add_argument("--train-failure-fusion-only", action="store_true")
+    parser.add_argument("--train-failure-suppress-only", action="store_true")
     args = parser.parse_args()
 
     seed_everything(args.seed)

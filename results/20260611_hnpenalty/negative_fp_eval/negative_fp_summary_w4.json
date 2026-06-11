@@ -1,0 +1,100 @@
+{
+  "negative_image_count": 843,
+  "negative_dirs": [
+    "D:\\mask\\baseline_runs\\clean_negative_candidates_review_20260610_fast\\images",
+    "D:\\mask\\baseline_runs\\clean_negative_candidates_review_20260610\\images",
+    "D:\\mask\\baseline_runs\\clean_negative_candidates_for_review\\images"
+  ],
+  "checkpoints": {
+    "experiments_fcf_tuned_20260611": {
+      "checkpoint": "D:\\mask\\baseline_runs\\experiments_fcf_tuned_20260611\\dual_lraspp_aux_fcf_mnv3\\best.pt",
+      "crack": {
+        "mean": 0.778621,
+        "median": 0.0,
+        "p90": 1.435699,
+        "p95": 6.199531,
+        "max": 22.388077,
+        "gt_0_5_pct_count": 110,
+        "gt_1_pct_count": 96
+      },
+      "spall": {
+        "mean": 1.237057,
+        "median": 0.0,
+        "p90": 0.0,
+        "p95": 1.024514,
+        "max": 100.0,
+        "gt_0_5_pct_count": 50,
+        "gt_1_pct_count": 44
+      },
+      "damage": {
+        "mean": 2.015678,
+        "median": 0.0,
+        "p90": 4.406891,
+        "p95": 9.79496,
+        "max": 100.0,
+        "gt_0_5_pct_count": 151,
+        "gt_1_pct_count": 133
+      }
+    },
+    "experiments_fcf_hnpenalty_w4_t004_fusiononly_8ep_20260611": {
+      "checkpoint": "D:\\mask\\baseline_runs\\experiments_fcf_hnpenalty_w4_t004_fusiononly_8ep_20260611\\dual_lraspp_aux_fcf_mnv3\\last.pt",
+      "crack": {
+        "mean": 0.829974,
+        "median": 0.0,
+        "p90": 1.674881,
+        "p95": 6.589051,
+        "max": 22.45903,
+        "gt_0_5_pct_count": 117,
+        "gt_1_pct_count": 100
+      },
+      "spall": {
+        "mean": 1.377737,
+        "median": 0.0,
+        "p90": 0.000305,
+        "p95": 2.829056,
+        "max": 100.0,
+        "gt_0_5_pct_count": 61,
+        "gt_1_pct_count": 50
+      },
+      "damage": {
+        "mean": 2.20771,
+        "median": 0.0,
+        "p90": 5.025482,
+        "p95": 10.199852,
+        "max": 100.0,
+        "gt_0_5_pct_count": 166,
+        "gt_1_pct_count": 144
+      }
+    },
+    "experiments_fcf_suppress_hnpenalty_w4_t004_fusiononly_8ep_20260611": {
+      "checkpoint": "D:\\mask\\baseline_runs\\experiments_fcf_suppress_hnpenalty_w4_t004_fusiononly_8ep_20260611\\dual_lraspp_aux_fcf_mnv3\\last.pt",
+      "crack": {
+        "mean": 0.830362,
+        "median": 0.0,
+        "p90": 1.67717,
+        "p95": 6.589699,
+        "max": 22.465897,
+        "gt_0_5_pct_count": 117,
+        "gt_1_pct_count": 100
+      },
+      "spall": {
+        "mean": 1.37773,
+        "median": 0.0,
+        "p90": 0.000305,
+        "p95": 2.829056,
+        "max": 100.0,
+        "gt_0_5_pct_count": 61,
+        "gt_1_pct_count": 50
+      },
+      "damage": {
+        "mean": 2.208092,
+        "median": 0.0,
+        "p90": 5.025711,
+        "p95": 10.203323,
+        "max": 100.0,
+        "gt_0_5_pct_count": 166,
+        "gt_1_pct_count": 144
+      }
+    }
+  }
+}
