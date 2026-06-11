@@ -855,6 +855,8 @@ def train_one(model_name, args, device):
         metrics.update({"epoch": epoch, "train_loss": running / max(1, len(train_loader))})
         history.append(metrics)
         print(model_name, json.dumps(metrics, ensure_ascii=False))
+        torch.save({"model": model.state_dict(), "metrics": metrics, "name": model_name}, out_dir / "last.pt")
+        (out_dir / "last_metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
         if metrics["miou_damage"] > best["miou_damage"]:
             best = dict(metrics)
             torch.save({"model": model.state_dict(), "metrics": best, "name": model_name}, out_dir / "best.pt")
